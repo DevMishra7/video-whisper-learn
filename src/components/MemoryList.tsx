@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { VolumeUp, Search, ArrowUpDown, Check, ListFilter } from 'lucide-react';
+import { Volume2, Search, ArrowUpDown, Check, ListFilter } from 'lucide-react';
 
 interface WordItem {
   id: string;
@@ -150,7 +149,7 @@ const MemoryList: React.FC = () => {
                         <div className="flex items-center">
                           <h4 className="font-medium text-gray-900">{word.word}</h4>
                           <Button variant="ghost" size="sm" className="p-0 h-6 w-6 ml-1">
-                            <VolumeUp className="h-4 w-4 text-linguify-primary" />
+                            <Volume2 className="h-4 w-4 text-linguify-primary" />
                           </Button>
                         </div>
                         

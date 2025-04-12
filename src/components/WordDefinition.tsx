@@ -2,7 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BookOpen, X, Plus, VolumeUp } from 'lucide-react';
+import { BookOpen, X, Plus, Volume2 } from 'lucide-react';
 
 interface WordDefinitionProps {
   word: string;
@@ -89,7 +89,7 @@ const WordDefinition: React.FC<WordDefinitionProps> = ({ word, position, onClose
             <div className="flex items-center">
               <h4 className="text-lg font-bold">{definition.word}</h4>
               <Button variant="ghost" size="sm" className="ml-1 p-0 h-6 w-6">
-                <VolumeUp className="h-4 w-4 text-linguify-primary" />
+                <Volume2 className="h-4 w-4 text-linguify-primary" />
               </Button>
             </div>
             <div className="flex">
