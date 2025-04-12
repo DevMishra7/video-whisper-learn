@@ -2,8 +2,9 @@
 
 ## Project info
 
-**URL**: https://lovable.dev/projects/7d0111de-e9bb-44ed-896b-2315a97c9adf
+**URL**: https://lovable.dev/projects/7d0111de-e9bb-44ed-896b-2315a97c9adf         
 
+**URL**: https://preview--video-whisper-learn.lovable.app/
 ## How can I edit this code?
 
 There are several ways of editing your application.
