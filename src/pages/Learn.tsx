@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -17,7 +18,8 @@ import {
   ChevronDown,
   ChevronUp,
   Plus,
-  ChevronLeft
+  ChevronLeft,
+  X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -30,6 +32,7 @@ const Learn: React.FC = () => {
   const [pausePoints, setPausePoints] = useState<PausePoint[]>([]);
   const [showTranscript, setShowTranscript] = useState(true);
   const [currentVideoTime, setCurrentVideoTime] = useState(0);
+  const [currentCaptions, setCurrentCaptions] = useState("");
   
   const handlePause = (timestamp: number) => {
     setPausePoints(prev => [...prev, { timestamp }]);
@@ -40,8 +43,17 @@ const Learn: React.FC = () => {
     setCurrentVideoTime(currentTime);
   };
   
+  const handleCaptionsUpdate = (captions: string) => {
+    setCurrentCaptions(captions);
+  };
+  
   const toggleTranscript = () => {
     setShowTranscript(prev => !prev);
+  };
+
+  const removeWordFromReview = (index: number) => {
+    setPausePoints(prev => prev.filter((_, i) => i !== index));
+    toast.info("Word removed from your review list");
   };
   
   // Mock quiz questions based on video content
@@ -83,7 +95,11 @@ const Learn: React.FC = () => {
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
-              <VideoPlayer onPause={handlePause} onTimeUpdate={handleTimeUpdate} />
+              <VideoPlayer 
+                onPause={handlePause} 
+                onTimeUpdate={handleTimeUpdate}
+                onCaptionsUpdate={handleCaptionsUpdate}
+              />
               
               {pausePoints.length > 0 && (
                 <Card className="bg-white shadow-md">
@@ -110,6 +126,14 @@ const Learn: React.FC = () => {
                             </Button>
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0 ml-1">
                               <Plus className="h-4 w-4 text-linguify-secondary" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 w-8 p-0 ml-1 hover:text-red-500"
+                              onClick={() => removeWordFromReview(index)}
+                            >
+                              <X className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
@@ -144,7 +168,10 @@ const Learn: React.FC = () => {
                   </Button>
                 </div>
                 
-                {showTranscript && <TranscriptDisplay currentTime={currentVideoTime} />}
+                {showTranscript && <TranscriptDisplay 
+                  currentTime={currentVideoTime} 
+                  captions={currentCaptions}
+                />}
               </div>
             </div>
             

@@ -3,19 +3,26 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { AlertTriangle, Play, Pause, ChevronRight, Youtube } from 'lucide-react';
+import { AlertTriangle, Play, Pause, ChevronRight, Youtube, Captions, CaptionsOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface VideoPlayerProps {
   onPause?: (timestamp: number) => void;
   onTimeUpdate?: (currentTime: number) => void;
+  onCaptionsUpdate?: (captions: string) => void;
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ onPause, onTimeUpdate }) => {
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
+  onPause, 
+  onTimeUpdate,
+  onCaptionsUpdate
+}) => {
   const [videoUrl, setVideoUrl] = useState('');
   const [videoId, setVideoId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [captionsEnabled, setCaptionsEnabled] = useState(true);
+  const [currentCaptions, setCurrentCaptions] = useState("");
   const videoRef = useRef<HTMLIFrameElement>(null);
   const [error, setError] = useState<string | null>(null);
   
@@ -50,6 +57,52 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ onPause, onTimeUpdate }) => {
   const handlePlay = () => {
     setIsPlaying(true);
   };
+
+  const toggleCaptions = () => {
+    setCaptionsEnabled(prev => !prev);
+    if (!captionsEnabled) {
+      toast.info("Captions enabled");
+    } else {
+      toast.info("Captions disabled");
+      setCurrentCaptions("");
+      if (onCaptionsUpdate) {
+        onCaptionsUpdate("");
+      }
+    }
+  };
+
+  // Mock captions based on time
+  useEffect(() => {
+    if (captionsEnabled && isPlaying) {
+      // Mock captions at different timestamps
+      const captionData = [
+        { start: 2, end: 4, text: "Hello and welcome to this English lesson" },
+        { start: 5, end: 7, text: "Today we're going to learn about vocabulary" },
+        { start: 8, end: 10, text: "for daily conversations with friends and family" },
+        { start: 12, end: 14, text: "Let's start with some basic greetings" },
+        { start: 15, end: 18, text: "When meeting someone you can say Hello or Hi" },
+        { start: 20, end: 23, text: "If it's morning you might say Good morning" },
+        { start: 24, end: 26, text: "In the afternoon Good afternoon" },
+        { start: 27, end: 30, text: "And in the evening Good evening or Good night" },
+      ];
+      
+      const currentCaption = captionData.find(
+        caption => currentTime >= caption.start && currentTime <= caption.end
+      );
+      
+      if (currentCaption && currentCaption.text !== currentCaptions) {
+        setCurrentCaptions(currentCaption.text);
+        if (onCaptionsUpdate) {
+          onCaptionsUpdate(currentCaption.text);
+        }
+      } else if (!currentCaption && currentCaptions) {
+        setCurrentCaptions("");
+        if (onCaptionsUpdate) {
+          onCaptionsUpdate("");
+        }
+      }
+    }
+  }, [currentTime, captionsEnabled, isPlaying, onCaptionsUpdate]);
 
   // Call onTimeUpdate when currentTime changes
   useEffect(() => {
@@ -120,7 +173,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ onPause, onTimeUpdate }) => {
         </Card>
       ) : (
         <div className="space-y-4">
-          <div className="video-container rounded-lg overflow-hidden shadow-lg">
+          <div className="video-container rounded-lg overflow-hidden shadow-lg relative">
             <iframe
               ref={videoRef}
               width="100%"
@@ -131,6 +184,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ onPause, onTimeUpdate }) => {
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
             ></iframe>
+            
+            {captionsEnabled && currentCaptions && (
+              <div className="absolute bottom-8 left-0 right-0 text-center">
+                <div className="bg-black bg-opacity-70 text-white px-4 py-2 mx-auto inline-block rounded">
+                  {currentCaptions}
+                </div>
+              </div>
+            )}
           </div>
           
           <div className="flex items-center justify-between">
@@ -139,6 +200,20 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ onPause, onTimeUpdate }) => {
             </div>
             
             <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleCaptions}
+                className="flex items-center"
+                title={captionsEnabled ? "Disable captions" : "Enable captions"}
+              >
+                {captionsEnabled ? (
+                  <Captions className="h-4 w-4" />
+                ) : (
+                  <CaptionsOff className="h-4 w-4" />
+                )}
+              </Button>
+                
               <Button
                 variant="outline"
                 size="sm"
@@ -164,6 +239,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ onPause, onTimeUpdate }) => {
                   setVideoUrl('');
                   setCurrentTime(0);
                   setIsPlaying(false);
+                  setCurrentCaptions("");
                 }}
               >
                 Reset

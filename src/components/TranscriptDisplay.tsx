@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import WordDefinition from './WordDefinition';
 
@@ -19,6 +19,7 @@ interface TranscriptSegment {
 interface TranscriptDisplayProps {
   transcript?: TranscriptSegment[];
   currentTime?: number;
+  captions?: string;
 }
 
 const mockTranscript: TranscriptSegment[] = [
@@ -56,9 +57,50 @@ const mockTranscript: TranscriptSegment[] = [
 const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
   transcript = mockTranscript,
   currentTime = 0,
+  captions = ''
 }) => {
   const [selectedWord, setSelectedWord] = useState<TranscriptWord | null>(null);
   const [definitionPosition, setDefinitionPosition] = useState({ x: 0, y: 0 });
+  const [dynamicTranscript, setDynamicTranscript] = useState<TranscriptSegment[]>(transcript);
+
+  // Update transcript when captions change
+  useEffect(() => {
+    if (captions && captions.trim() !== '') {
+      // Process new captions and add them to the transcript
+      const words = captions.split(/\s+/).filter(word => word.trim() !== '');
+      if (words.length > 0) {
+        const startTime = currentTime;
+        const endTime = currentTime + 2; // Approximate 2 seconds duration per caption
+        
+        const newSegment: TranscriptSegment = {
+          words: words.map((text, idx) => {
+            const wordDuration = 2 / words.length;
+            const start = startTime + (idx * wordDuration);
+            const end = start + wordDuration;
+            return { text, start, end, highlighted: false };
+          }),
+          start: startTime,
+          end: endTime
+        };
+        
+        // Check if we need to update an existing segment or add a new one
+        let updated = false;
+        const updatedTranscript = dynamicTranscript.map(segment => {
+          if (Math.abs(segment.start - startTime) < 1) {
+            updated = true;
+            return newSegment;
+          }
+          return segment;
+        });
+        
+        if (!updated) {
+          setDynamicTranscript([...dynamicTranscript, newSegment]);
+        } else {
+          setDynamicTranscript(updatedTranscript);
+        }
+      }
+    }
+  }, [captions, currentTime]);
 
   const handleWordClick = (
     word: TranscriptWord,
@@ -77,7 +119,7 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
   };
 
   // Find the current active segment based on time
-  const currentSegment = transcript.find(
+  const currentSegment = dynamicTranscript.find(
     segment => currentTime >= segment.start && currentTime <= segment.end
   );
 
@@ -87,7 +129,7 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
         <CardContent className="pt-6">
           <h3 className="text-xl font-bold mb-4">Transcript</h3>
           <div className="max-h-60 overflow-y-auto pr-2">
-            {transcript.map((segment, segIndex) => {
+            {dynamicTranscript.map((segment, segIndex) => {
               const isActiveSegment = currentSegment === segment;
               
               return (
