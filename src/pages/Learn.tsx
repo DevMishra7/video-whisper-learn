@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -30,10 +29,15 @@ interface PausePoint {
 const Learn: React.FC = () => {
   const [pausePoints, setPausePoints] = useState<PausePoint[]>([]);
   const [showTranscript, setShowTranscript] = useState(true);
+  const [currentVideoTime, setCurrentVideoTime] = useState(0);
   
   const handlePause = (timestamp: number) => {
     setPausePoints(prev => [...prev, { timestamp }]);
     toast.info("Video paused - definition added to your review list");
+  };
+  
+  const handleTimeUpdate = (currentTime: number) => {
+    setCurrentVideoTime(currentTime);
   };
   
   const toggleTranscript = () => {
@@ -79,7 +83,7 @@ const Learn: React.FC = () => {
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
-              <VideoPlayer onPause={handlePause} />
+              <VideoPlayer onPause={handlePause} onTimeUpdate={handleTimeUpdate} />
               
               {pausePoints.length > 0 && (
                 <Card className="bg-white shadow-md">
@@ -140,7 +144,7 @@ const Learn: React.FC = () => {
                   </Button>
                 </div>
                 
-                {showTranscript && <TranscriptDisplay />}
+                {showTranscript && <TranscriptDisplay currentTime={currentVideoTime} />}
               </div>
             </div>
             

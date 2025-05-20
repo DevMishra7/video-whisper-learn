@@ -76,34 +76,46 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
     setSelectedWord(null);
   };
 
+  // Find the current active segment based on time
+  const currentSegment = transcript.find(
+    segment => currentTime >= segment.start && currentTime <= segment.end
+  );
+
   return (
     <div className="w-full max-w-3xl mx-auto mt-6">
       <Card className="bg-white shadow-md">
         <CardContent className="pt-6">
           <h3 className="text-xl font-bold mb-4">Transcript</h3>
           <div className="max-h-60 overflow-y-auto pr-2">
-            {transcript.map((segment, segIndex) => (
-              <div key={segIndex} className="mb-4">
-                {segment.words.map((word, wordIndex) => (
-                  <React.Fragment key={`${segIndex}-${wordIndex}`}>
-                    <span
-                      className={`${
-                        word.highlighted
-                          ? "highlighted-word"
-                          : "hover:bg-gray-100 transition-colors px-1 py-0.5 rounded"
-                      } ${
-                        currentTime >= word.start && currentTime <= word.end
-                          ? "bg-linguify-primary/20"
-                          : ""
-                      }`}
-                      onClick={(e) => handleWordClick(word, e)}
-                    >
-                      {word.text}
-                    </span>{" "}
-                  </React.Fragment>
-                ))}
-              </div>
-            ))}
+            {transcript.map((segment, segIndex) => {
+              const isActiveSegment = currentSegment === segment;
+              
+              return (
+                <div 
+                  key={segIndex} 
+                  className={`mb-4 p-2 rounded-md ${isActiveSegment ? "bg-gray-50" : ""}`}
+                >
+                  {segment.words.map((word, wordIndex) => (
+                    <React.Fragment key={`${segIndex}-${wordIndex}`}>
+                      <span
+                        className={`${
+                          word.highlighted
+                            ? "text-linguify-primary font-medium"
+                            : "hover:bg-gray-100 transition-colors px-1 py-0.5 rounded"
+                        } ${
+                          currentTime >= word.start && currentTime <= word.end
+                            ? "bg-linguify-primary/20 px-1 rounded"
+                            : ""
+                        } cursor-pointer`}
+                        onClick={(e) => handleWordClick(word, e)}
+                      >
+                        {word.text}
+                      </span>{" "}
+                    </React.Fragment>
+                  ))}
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>

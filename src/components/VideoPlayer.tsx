@@ -8,9 +8,10 @@ import { toast } from 'sonner';
 
 interface VideoPlayerProps {
   onPause?: (timestamp: number) => void;
+  onTimeUpdate?: (currentTime: number) => void;
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ onPause }) => {
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ onPause, onTimeUpdate }) => {
   const [videoUrl, setVideoUrl] = useState('');
   const [videoId, setVideoId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -49,6 +50,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ onPause }) => {
   const handlePlay = () => {
     setIsPlaying(true);
   };
+
+  // Call onTimeUpdate when currentTime changes
+  useEffect(() => {
+    if (onTimeUpdate) {
+      onTimeUpdate(currentTime);
+    }
+  }, [currentTime, onTimeUpdate]);
 
   // Mock function for YouTube iframe API
   useEffect(() => {
