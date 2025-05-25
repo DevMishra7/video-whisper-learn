@@ -5,27 +5,35 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { AlertTriangle, Play, Pause, ChevronRight, Youtube, Captions, CaptionsOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { useYouTubeCaptions } from '@/hooks/useYouTubeCaptions';
 
 interface VideoPlayerProps {
   onPause?: (timestamp: number) => void;
   onTimeUpdate?: (currentTime: number) => void;
   onCaptionsUpdate?: (captions: string) => void;
+  onCaptionsDataUpdate?: (captions: any[]) => void;
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
   onPause, 
   onTimeUpdate,
-  onCaptionsUpdate
+  onCaptionsUpdate,
+  onCaptionsDataUpdate
 }) => {
   const [videoUrl, setVideoUrl] = useState('');
   const [videoId, setVideoId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [captionsEnabled, setCaptionsEnabled] = useState(true);
-  const [currentCaptions, setCurrentCaptions] = useState("");
   const videoRef = useRef<HTMLIFrameElement>(null);
   const [error, setError] = useState<string | null>(null);
   
+  const { captions, currentCaption, loading, error: captionsError } = useYouTubeCaptions({
+    videoId,
+    currentTime,
+    enabled: captionsEnabled
+  });
+
   // Function to extract YouTube video ID from URL
   const extractYouTubeId = (url: string): string | null => {
     const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
@@ -42,7 +50,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       setError(null);
       setCurrentTime(0);
       setIsPlaying(false);
-      setCurrentCaptions("");
       toast.success("Video loaded successfully!");
     } else {
       setError('Invalid YouTube URL. Please enter a valid YouTube video link.');
@@ -67,53 +74,25 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       toast.info("Captions enabled");
     } else {
       toast.info("Captions disabled");
-      setCurrentCaptions("");
       if (onCaptionsUpdate) {
         onCaptionsUpdate("");
       }
     }
   };
 
-  // Enhanced captions that match the video content more realistically
+  // Update parent component with current caption
   useEffect(() => {
-    if (captionsEnabled && isPlaying && videoId) {
-      // Realistic captions based on typical English learning video content
-      const captionData = [
-        { start: 0, end: 3, text: "Hello and welcome to this English lesson" },
-        { start: 4, end: 7, text: "Today we're going to learn about vocabulary" },
-        { start: 8, end: 11, text: "for daily conversations with friends and family" },
-        { start: 12, end: 15, text: "Let's start with some basic greetings" },
-        { start: 16, end: 19, text: "When meeting someone you can say Hello or Hi" },
-        { start: 20, end: 23, text: "If it's morning you might say Good morning" },
-        { start: 24, end: 27, text: "In the afternoon Good afternoon" },
-        { start: 28, end: 31, text: "And in the evening Good evening or Good night" },
-        { start: 32, end: 35, text: "Now let's practice some common phrases" },
-        { start: 36, end: 39, text: "How are you is a very useful question" },
-        { start: 40, end: 43, text: "You can answer I'm fine thank you" },
-        { start: 44, end: 47, text: "Or I'm doing well how about you" },
-        { start: 48, end: 51, text: "These are essential phrases for beginners" },
-        { start: 52, end: 55, text: "Practice them every day to improve" },
-        { start: 56, end: 59, text: "Remember to speak clearly and slowly" },
-        { start: 60, end: 63, text: "That's all for today's lesson" },
-      ];
-      
-      const currentCaption = captionData.find(
-        caption => currentTime >= caption.start && currentTime <= caption.end
-      );
-      
-      if (currentCaption && currentCaption.text !== currentCaptions) {
-        setCurrentCaptions(currentCaption.text);
-        if (onCaptionsUpdate) {
-          onCaptionsUpdate(currentCaption.text);
-        }
-      } else if (!currentCaption && currentCaptions) {
-        setCurrentCaptions("");
-        if (onCaptionsUpdate) {
-          onCaptionsUpdate("");
-        }
-      }
+    if (onCaptionsUpdate) {
+      onCaptionsUpdate(currentCaption);
     }
-  }, [currentTime, captionsEnabled, isPlaying, videoId, onCaptionsUpdate, currentCaptions]);
+  }, [currentCaption, onCaptionsUpdate]);
+
+  // Update parent component with full captions data
+  useEffect(() => {
+    if (onCaptionsDataUpdate && captions.length > 0) {
+      onCaptionsDataUpdate(captions);
+    }
+  }, [captions, onCaptionsDataUpdate]);
 
   // Call onTimeUpdate when currentTime changes
   useEffect(() => {
@@ -196,10 +175,26 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               allowFullScreen
             ></iframe>
             
-            {captionsEnabled && currentCaptions && (
+            {captionsEnabled && currentCaption && (
               <div className="absolute bottom-8 left-0 right-0 text-center">
                 <div className="bg-black bg-opacity-70 text-white px-4 py-2 mx-auto inline-block rounded">
-                  {currentCaptions}
+                  {currentCaption}
+                </div>
+              </div>
+            )}
+            
+            {captionsEnabled && captionsError && (
+              <div className="absolute bottom-8 left-0 right-0 text-center">
+                <div className="bg-red-600 bg-opacity-70 text-white px-4 py-2 mx-auto inline-block rounded text-sm">
+                  {captionsError}
+                </div>
+              </div>
+            )}
+            
+            {captionsEnabled && loading && (
+              <div className="absolute bottom-8 left-0 right-0 text-center">
+                <div className="bg-blue-600 bg-opacity-70 text-white px-4 py-2 mx-auto inline-block rounded text-sm">
+                  Loading captions...
                 </div>
               </div>
             )}
@@ -250,9 +245,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   setVideoUrl('');
                   setCurrentTime(0);
                   setIsPlaying(false);
-                  setCurrentCaptions("");
                   if (onCaptionsUpdate) {
                     onCaptionsUpdate("");
+                  }
+                  if (onCaptionsDataUpdate) {
+                    onCaptionsDataUpdate([]);
                   }
                 }}
               >

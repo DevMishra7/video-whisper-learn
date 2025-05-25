@@ -4,11 +4,18 @@ import { Button } from '@/components/ui/button';
 import { BookOpen, ChevronUp, ChevronDown } from 'lucide-react';
 import TranscriptDisplay from '@/components/TranscriptDisplay';
 
+interface YouTubeCaption {
+  start: number;
+  duration: number;
+  text: string;
+}
+
 interface TranscriptSectionProps {
   showTranscript: boolean;
   toggleTranscript: () => void;
   currentVideoTime: number;
   currentCaptions: string;
+  captionsData?: YouTubeCaption[];
 }
 
 const TranscriptSection: React.FC<TranscriptSectionProps> = ({
@@ -16,6 +23,7 @@ const TranscriptSection: React.FC<TranscriptSectionProps> = ({
   toggleTranscript,
   currentVideoTime,
   currentCaptions,
+  captionsData
 }) => {
   return (
     <div className="bg-white shadow-md rounded-lg p-4">
@@ -47,6 +55,7 @@ const TranscriptSection: React.FC<TranscriptSectionProps> = ({
         <TranscriptDisplay 
           currentTime={currentVideoTime} 
           captions={currentCaptions}
+          captionsData={captionsData}
         />
       )}
     </div>

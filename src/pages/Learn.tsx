@@ -17,11 +17,18 @@ interface PausePoint {
   word?: string;
 }
 
+interface YouTubeCaption {
+  start: number;
+  duration: number;
+  text: string;
+}
+
 const Learn: React.FC = () => {
   const [pausePoints, setPausePoints] = useState<PausePoint[]>([]);
   const [showTranscript, setShowTranscript] = useState(true);
   const [currentVideoTime, setCurrentVideoTime] = useState(0);
   const [currentCaptions, setCurrentCaptions] = useState("");
+  const [captionsData, setCaptionsData] = useState<YouTubeCaption[]>([]);
   
   const handlePause = (timestamp: number) => {
     setPausePoints(prev => [...prev, { timestamp }]);
@@ -34,6 +41,10 @@ const Learn: React.FC = () => {
   
   const handleCaptionsUpdate = (captions: string) => {
     setCurrentCaptions(captions);
+  };
+
+  const handleCaptionsDataUpdate = (captions: YouTubeCaption[]) => {
+    setCaptionsData(captions);
   };
   
   const toggleTranscript = () => {
@@ -88,6 +99,7 @@ const Learn: React.FC = () => {
                 onPause={handlePause} 
                 onTimeUpdate={handleTimeUpdate}
                 onCaptionsUpdate={handleCaptionsUpdate}
+                onCaptionsDataUpdate={handleCaptionsDataUpdate}
               />
               
               <WordReview 
@@ -100,6 +112,7 @@ const Learn: React.FC = () => {
                 toggleTranscript={toggleTranscript}
                 currentVideoTime={currentVideoTime}
                 currentCaptions={currentCaptions}
+                captionsData={captionsData}
               />
             </div>
             

@@ -16,27 +16,64 @@ interface TranscriptSegment {
   end: number;
 }
 
+interface YouTubeCaption {
+  start: number;
+  duration: number;
+  text: string;
+}
+
 interface TranscriptDisplayProps {
   transcript?: TranscriptSegment[];
   currentTime?: number;
   captions?: string;
+  captionsData?: YouTubeCaption[];
 }
 
 const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
   currentTime = 0,
-  captions = ''
+  captions = '',
+  captionsData = []
 }) => {
   const [selectedWord, setSelectedWord] = useState<TranscriptWord | null>(null);
   const [definitionPosition, setDefinitionPosition] = useState({ x: 0, y: 0 });
   const [dynamicTranscript, setDynamicTranscript] = useState<TranscriptSegment[]>([]);
 
-  // Create transcript segments from video captions
+  // Create transcript segments from YouTube captions data
   useEffect(() => {
-    if (captions && captions.trim() !== '') {
+    if (captionsData && captionsData.length > 0) {
+      const segments: TranscriptSegment[] = captionsData.map(caption => {
+        const words = caption.text.split(/\s+/).filter(word => word.trim() !== '');
+        const wordDuration = caption.duration / words.length;
+        
+        const transcriptWords: TranscriptWord[] = words.map((text, idx) => {
+          const start = caption.start + (idx * wordDuration);
+          const end = start + wordDuration;
+          
+          // Highlight key vocabulary words
+          const highlighted = [
+            'hello', 'welcome', 'lesson', 'vocabulary', 'learn', 'greetings', 
+            'morning', 'afternoon', 'evening', 'practice', 'phrases', 'question',
+            'answer', 'essential', 'beginners', 'improve', 'clearly', 'slowly',
+            'conversation', 'family', 'friends', 'basic', 'useful', 'common'
+          ].includes(text.toLowerCase().replace(/[.,!?]/g, ''));
+          
+          return { text, start, end, highlighted };
+        });
+
+        return {
+          words: transcriptWords,
+          start: caption.start,
+          end: caption.start + caption.duration
+        };
+      });
+
+      setDynamicTranscript(segments);
+    } else if (captions && captions.trim() !== '') {
+      // Fallback to dynamic caption creation if no structured data
       const words = captions.split(/\s+/).filter(word => word.trim() !== '');
       if (words.length > 0) {
         const startTime = Math.floor(currentTime);
-        const endTime = startTime + 3; // 3 seconds duration per caption segment
+        const endTime = startTime + 3;
         
         const newSegment: TranscriptSegment = {
           words: words.map((text, idx) => {
@@ -44,7 +81,6 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
             const start = startTime + (idx * wordDuration);
             const end = start + wordDuration;
             
-            // Highlight key vocabulary words
             const highlighted = [
               'hello', 'welcome', 'lesson', 'vocabulary', 'learn', 'greetings', 
               'morning', 'afternoon', 'evening', 'practice', 'phrases', 'question',
@@ -57,7 +93,6 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
           end: endTime
         };
         
-        // Update existing segment if it's close in time, otherwise add new one
         setDynamicTranscript(prev => {
           const existingIndex = prev.findIndex(segment => 
             Math.abs(segment.start - startTime) < 2
@@ -73,7 +108,7 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
         });
       }
     }
-  }, [captions, currentTime]);
+  }, [captions, captionsData, currentTime]);
 
   const handleWordClick = (
     word: TranscriptWord,
@@ -105,6 +140,7 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
             {dynamicTranscript.length === 0 ? (
               <div className="text-gray-500 text-center py-8">
                 <p>Play the video to see the transcript appear here...</p>
+                <p className="text-sm mt-2">Real captions will be loaded from YouTube when available</p>
               </div>
             ) : (
               dynamicTranscript.map((segment, segIndex) => {
@@ -118,7 +154,7 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
                     }`}
                   >
                     <div className="text-xs text-gray-500 mb-1">
-                      {Math.floor(segment.start / 60)}:{(segment.start % 60).toString().padStart(2, '0')} - {Math.floor(segment.end / 60)}:{(segment.end % 60).toString().padStart(2, '0')}
+                      {Math.floor(segment.start / 60)}:{(segment.start % 60).toFixed(1).padStart(4, '0')} - {Math.floor(segment.end / 60)}:{(segment.end % 60).toFixed(1).padStart(4, '0')}
                     </div>
                     {segment.words.map((word, wordIndex) => (
                       <React.Fragment key={`${segIndex}-${wordIndex}`}>
