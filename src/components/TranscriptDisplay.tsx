@@ -22,82 +22,55 @@ interface TranscriptDisplayProps {
   captions?: string;
 }
 
-const mockTranscript: TranscriptSegment[] = [
-  {
-    words: [
-      { text: "Hello", start: 0.1, end: 0.5, highlighted: true },
-      { text: "and", start: 0.6, end: 0.8 },
-      { text: "welcome", start: 0.9, end: 1.4, highlighted: true },
-      { text: "to", start: 1.5, end: 1.7 },
-      { text: "this", start: 1.8, end: 2.1 },
-      { text: "English", start: 2.2, end: 2.8, highlighted: true },
-      { text: "lesson", start: 2.9, end: 3.4, highlighted: true },
-    ],
-    start: 0,
-    end: 3.5,
-  },
-  {
-    words: [
-      { text: "Today", start: 4.0, end: 4.3 },
-      { text: "we're", start: 4.4, end: 4.6 },
-      { text: "going", start: 4.7, end: 4.9 },
-      { text: "to", start: 5.0, end: 5.1 },
-      { text: "learn", start: 5.2, end: 5.5, highlighted: true },
-      { text: "about", start: 5.6, end: 5.9 },
-      { text: "vocabulary", start: 6.0, end: 6.8, highlighted: true },
-      { text: "for", start: 6.9, end: 7.1 },
-      { text: "daily", start: 7.2, end: 7.6 },
-      { text: "conversations", start: 7.7, end: 8.6, highlighted: true },
-    ],
-    start: 4.0,
-    end: 8.6,
-  },
-];
-
 const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
-  transcript = mockTranscript,
   currentTime = 0,
   captions = ''
 }) => {
   const [selectedWord, setSelectedWord] = useState<TranscriptWord | null>(null);
   const [definitionPosition, setDefinitionPosition] = useState({ x: 0, y: 0 });
-  const [dynamicTranscript, setDynamicTranscript] = useState<TranscriptSegment[]>(transcript);
+  const [dynamicTranscript, setDynamicTranscript] = useState<TranscriptSegment[]>([]);
 
-  // Update transcript when captions change
+  // Create transcript segments from video captions
   useEffect(() => {
     if (captions && captions.trim() !== '') {
-      // Process new captions and add them to the transcript
       const words = captions.split(/\s+/).filter(word => word.trim() !== '');
       if (words.length > 0) {
-        const startTime = currentTime;
-        const endTime = currentTime + 2; // Approximate 2 seconds duration per caption
+        const startTime = Math.floor(currentTime);
+        const endTime = startTime + 3; // 3 seconds duration per caption segment
         
         const newSegment: TranscriptSegment = {
           words: words.map((text, idx) => {
-            const wordDuration = 2 / words.length;
+            const wordDuration = 3 / words.length;
             const start = startTime + (idx * wordDuration);
             const end = start + wordDuration;
-            return { text, start, end, highlighted: false };
+            
+            // Highlight key vocabulary words
+            const highlighted = [
+              'hello', 'welcome', 'lesson', 'vocabulary', 'learn', 'greetings', 
+              'morning', 'afternoon', 'evening', 'practice', 'phrases', 'question',
+              'answer', 'essential', 'beginners', 'improve', 'clearly', 'slowly'
+            ].includes(text.toLowerCase().replace(/[.,!?]/g, ''));
+            
+            return { text, start, end, highlighted };
           }),
           start: startTime,
           end: endTime
         };
         
-        // Check if we need to update an existing segment or add a new one
-        let updated = false;
-        const updatedTranscript = dynamicTranscript.map(segment => {
-          if (Math.abs(segment.start - startTime) < 1) {
-            updated = true;
-            return newSegment;
+        // Update existing segment if it's close in time, otherwise add new one
+        setDynamicTranscript(prev => {
+          const existingIndex = prev.findIndex(segment => 
+            Math.abs(segment.start - startTime) < 2
+          );
+          
+          if (existingIndex !== -1) {
+            const updated = [...prev];
+            updated[existingIndex] = newSegment;
+            return updated;
+          } else {
+            return [...prev, newSegment].sort((a, b) => a.start - b.start);
           }
-          return segment;
         });
-        
-        if (!updated) {
-          setDynamicTranscript([...dynamicTranscript, newSegment]);
-        } else {
-          setDynamicTranscript(updatedTranscript);
-        }
       }
     }
   }, [captions, currentTime]);
@@ -129,35 +102,46 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
         <CardContent className="pt-6">
           <h3 className="text-xl font-bold mb-4">Transcript</h3>
           <div className="max-h-60 overflow-y-auto pr-2">
-            {dynamicTranscript.map((segment, segIndex) => {
-              const isActiveSegment = currentSegment === segment;
-              
-              return (
-                <div 
-                  key={segIndex} 
-                  className={`mb-4 p-2 rounded-md ${isActiveSegment ? "bg-gray-50" : ""}`}
-                >
-                  {segment.words.map((word, wordIndex) => (
-                    <React.Fragment key={`${segIndex}-${wordIndex}`}>
-                      <span
-                        className={`${
-                          word.highlighted
-                            ? "text-linguify-primary font-medium"
-                            : "hover:bg-gray-100 transition-colors px-1 py-0.5 rounded"
-                        } ${
-                          currentTime >= word.start && currentTime <= word.end
-                            ? "bg-linguify-primary/20 px-1 rounded"
-                            : ""
-                        } cursor-pointer`}
-                        onClick={(e) => handleWordClick(word, e)}
-                      >
-                        {word.text}
-                      </span>{" "}
-                    </React.Fragment>
-                  ))}
-                </div>
-              );
-            })}
+            {dynamicTranscript.length === 0 ? (
+              <div className="text-gray-500 text-center py-8">
+                <p>Play the video to see the transcript appear here...</p>
+              </div>
+            ) : (
+              dynamicTranscript.map((segment, segIndex) => {
+                const isActiveSegment = currentSegment === segment;
+                
+                return (
+                  <div 
+                    key={segIndex} 
+                    className={`mb-4 p-3 rounded-md transition-colors ${
+                      isActiveSegment ? "bg-linguify-primary/10 border-l-4 border-linguify-primary" : "hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="text-xs text-gray-500 mb-1">
+                      {Math.floor(segment.start / 60)}:{(segment.start % 60).toString().padStart(2, '0')} - {Math.floor(segment.end / 60)}:{(segment.end % 60).toString().padStart(2, '0')}
+                    </div>
+                    {segment.words.map((word, wordIndex) => (
+                      <React.Fragment key={`${segIndex}-${wordIndex}`}>
+                        <span
+                          className={`${
+                            word.highlighted
+                              ? "text-linguify-primary font-medium bg-linguify-primary/10 px-1 rounded"
+                              : "hover:bg-gray-100 transition-colors px-1 py-0.5 rounded"
+                          } ${
+                            currentTime >= word.start && currentTime <= word.end && isActiveSegment
+                              ? "bg-yellow-200 px-1 rounded shadow-sm"
+                              : ""
+                          } cursor-pointer`}
+                          onClick={(e) => handleWordClick(word, e)}
+                        >
+                          {word.text}
+                        </span>{" "}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                );
+              })
+            )}
           </div>
         </CardContent>
       </Card>

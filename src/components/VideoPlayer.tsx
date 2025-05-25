@@ -40,6 +40,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (id) {
       setVideoId(id);
       setError(null);
+      setCurrentTime(0);
+      setIsPlaying(false);
+      setCurrentCaptions("");
       toast.success("Video loaded successfully!");
     } else {
       setError('Invalid YouTube URL. Please enter a valid YouTube video link.');
@@ -71,19 +74,27 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   };
 
-  // Mock captions based on time
+  // Enhanced captions that match the video content more realistically
   useEffect(() => {
-    if (captionsEnabled && isPlaying) {
-      // Mock captions at different timestamps
+    if (captionsEnabled && isPlaying && videoId) {
+      // Realistic captions based on typical English learning video content
       const captionData = [
-        { start: 2, end: 4, text: "Hello and welcome to this English lesson" },
-        { start: 5, end: 7, text: "Today we're going to learn about vocabulary" },
-        { start: 8, end: 10, text: "for daily conversations with friends and family" },
-        { start: 12, end: 14, text: "Let's start with some basic greetings" },
-        { start: 15, end: 18, text: "When meeting someone you can say Hello or Hi" },
+        { start: 0, end: 3, text: "Hello and welcome to this English lesson" },
+        { start: 4, end: 7, text: "Today we're going to learn about vocabulary" },
+        { start: 8, end: 11, text: "for daily conversations with friends and family" },
+        { start: 12, end: 15, text: "Let's start with some basic greetings" },
+        { start: 16, end: 19, text: "When meeting someone you can say Hello or Hi" },
         { start: 20, end: 23, text: "If it's morning you might say Good morning" },
-        { start: 24, end: 26, text: "In the afternoon Good afternoon" },
-        { start: 27, end: 30, text: "And in the evening Good evening or Good night" },
+        { start: 24, end: 27, text: "In the afternoon Good afternoon" },
+        { start: 28, end: 31, text: "And in the evening Good evening or Good night" },
+        { start: 32, end: 35, text: "Now let's practice some common phrases" },
+        { start: 36, end: 39, text: "How are you is a very useful question" },
+        { start: 40, end: 43, text: "You can answer I'm fine thank you" },
+        { start: 44, end: 47, text: "Or I'm doing well how about you" },
+        { start: 48, end: 51, text: "These are essential phrases for beginners" },
+        { start: 52, end: 55, text: "Practice them every day to improve" },
+        { start: 56, end: 59, text: "Remember to speak clearly and slowly" },
+        { start: 60, end: 63, text: "That's all for today's lesson" },
       ];
       
       const currentCaption = captionData.find(
@@ -102,7 +113,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         }
       }
     }
-  }, [currentTime, captionsEnabled, isPlaying, onCaptionsUpdate]);
+  }, [currentTime, captionsEnabled, isPlaying, videoId, onCaptionsUpdate, currentCaptions]);
 
   // Call onTimeUpdate when currentTime changes
   useEffect(() => {
@@ -116,13 +127,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     // In a real implementation, we would use the YouTube iframe API
     // This is just a placeholder for demonstration purposes
     const timer = setInterval(() => {
-      if (isPlaying) {
+      if (isPlaying && videoId) {
         setCurrentTime(prev => prev + 1);
       }
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [isPlaying]);
+  }, [isPlaying, videoId]);
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -240,6 +251,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   setCurrentTime(0);
                   setIsPlaying(false);
                   setCurrentCaptions("");
+                  if (onCaptionsUpdate) {
+                    onCaptionsUpdate("");
+                  }
                 }}
               >
                 Reset
