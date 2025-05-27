@@ -50,7 +50,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       setError(null);
       setCurrentTime(0);
       setIsPlaying(false);
-      toast.success("Video loaded successfully!");
+      toast.success("Video loaded! Loading transcript...");
     } else {
       setError('Invalid YouTube URL. Please enter a valid YouTube video link.');
       toast.error("Invalid YouTube URL!");
@@ -91,6 +91,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   useEffect(() => {
     if (onCaptionsDataUpdate && captions.length > 0) {
       onCaptionsDataUpdate(captions);
+      toast.success("Transcript loaded successfully!");
     }
   }, [captions, onCaptionsDataUpdate]);
 
@@ -194,7 +195,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             {captionsEnabled && loading && (
               <div className="absolute bottom-8 left-0 right-0 text-center">
                 <div className="bg-blue-600 bg-opacity-70 text-white px-4 py-2 mx-auto inline-block rounded text-sm">
-                  Loading captions...
+                  Loading transcript...
                 </div>
               </div>
             )}

@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { YouTubeApiService } from '@/services/youtubeApi';
+import { TranscriptApiService } from '@/services/transcriptApi';
 
 interface YouTubeCaption {
   start: number;
@@ -28,36 +28,31 @@ export const useYouTubeCaptions = ({ videoId, currentTime, enabled }: UseYouTube
         return;
       }
 
-      const apiKey = 'AIzaSyCmiNHGvOZWiDTpBDjqrUUoVRF-SCbn7eQ';
-
       setLoading(true);
       setError(null);
 
       try {
-        const youtubeService = new YouTubeApiService(apiKey);
-        const tracks = await youtubeService.getCaptionTracks(videoId);
+        console.log('Fetching real transcript for video:', videoId);
+        const transcriptService = new TranscriptApiService();
+        const transcriptData = await transcriptService.getTranscript(videoId);
         
-        if (tracks.length > 0) {
-          console.log('Caption tracks found, generating sample captions');
-          // Since we can't access the actual captions without OAuth2, 
-          // we'll generate sample captions that demonstrate the functionality
-          const captionData = await youtubeService.getCaptions(tracks[0].id);
-          setCaptions(captionData);
-          console.log('Sample captions loaded successfully:', captionData.length, 'segments');
-        } else {
-          setError('No captions available for this video');
-          setCaptions([]);
+        // Convert transcript format to caption format
+        const captionData: YouTubeCaption[] = transcriptData.map(item => ({
+          start: item.start,
+          duration: item.duration,
+          text: item.text
+        }));
+        
+        setCaptions(captionData);
+        console.log('Transcript loaded successfully:', captionData.length, 'segments');
+        
+        if (captionData.length === 0) {
+          setError('No transcript available for this video');
         }
       } catch (err) {
-        console.log('Note: YouTube caption download requires OAuth2 authentication');
-        console.log('Generating sample captions for demonstration');
-        
-        // Generate sample captions even if API fails
-        const youtubeService = new YouTubeApiService(apiKey);
-        const sampleCaptions = await youtubeService.getCaptions('sample');
-        setCaptions(sampleCaptions);
-        
-        setError('Using sample captions (YouTube API requires OAuth2 for real captions)');
+        console.error('Error fetching transcript:', err);
+        setError('Failed to load transcript for this video');
+        setCaptions([]);
       } finally {
         setLoading(false);
       }
