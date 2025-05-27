@@ -3,37 +3,21 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { AlertTriangle, Play, Pause, ChevronRight, Youtube, Captions, CaptionsOff } from 'lucide-react';
+import { AlertTriangle, Play, Pause, ChevronRight, Youtube } from 'lucide-react';
 import { toast } from 'sonner';
-import { useYouTubeCaptions } from '@/hooks/useYouTubeCaptions';
 
 interface VideoPlayerProps {
   onPause?: (timestamp: number) => void;
-  onTimeUpdate?: (currentTime: number) => void;
-  onCaptionsUpdate?: (captions: string) => void;
-  onCaptionsDataUpdate?: (captions: any[]) => void;
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
-  onPause, 
-  onTimeUpdate,
-  onCaptionsUpdate,
-  onCaptionsDataUpdate
-}) => {
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ onPause }) => {
   const [videoUrl, setVideoUrl] = useState('');
   const [videoId, setVideoId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [captionsEnabled, setCaptionsEnabled] = useState(true);
   const videoRef = useRef<HTMLIFrameElement>(null);
   const [error, setError] = useState<string | null>(null);
   
-  const { captions, currentCaption, loading, error: captionsError } = useYouTubeCaptions({
-    videoId,
-    currentTime,
-    enabled: captionsEnabled
-  });
-
   // Function to extract YouTube video ID from URL
   const extractYouTubeId = (url: string): string | null => {
     const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
@@ -48,9 +32,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (id) {
       setVideoId(id);
       setError(null);
-      setCurrentTime(0);
-      setIsPlaying(false);
-      toast.success("Video loaded! Loading transcript...");
+      toast.success("Video loaded successfully!");
     } else {
       setError('Invalid YouTube URL. Please enter a valid YouTube video link.');
       toast.error("Invalid YouTube URL!");
@@ -68,52 +50,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setIsPlaying(true);
   };
 
-  const toggleCaptions = () => {
-    setCaptionsEnabled(prev => !prev);
-    if (!captionsEnabled) {
-      toast.info("Captions enabled");
-    } else {
-      toast.info("Captions disabled");
-      if (onCaptionsUpdate) {
-        onCaptionsUpdate("");
-      }
-    }
-  };
-
-  // Update parent component with current caption
-  useEffect(() => {
-    if (onCaptionsUpdate) {
-      onCaptionsUpdate(currentCaption);
-    }
-  }, [currentCaption, onCaptionsUpdate]);
-
-  // Update parent component with full captions data
-  useEffect(() => {
-    if (onCaptionsDataUpdate && captions.length > 0) {
-      onCaptionsDataUpdate(captions);
-      toast.success("Transcript loaded successfully!");
-    }
-  }, [captions, onCaptionsDataUpdate]);
-
-  // Call onTimeUpdate when currentTime changes
-  useEffect(() => {
-    if (onTimeUpdate) {
-      onTimeUpdate(currentTime);
-    }
-  }, [currentTime, onTimeUpdate]);
-
   // Mock function for YouTube iframe API
   useEffect(() => {
     // In a real implementation, we would use the YouTube iframe API
     // This is just a placeholder for demonstration purposes
     const timer = setInterval(() => {
-      if (isPlaying && videoId) {
+      if (isPlaying) {
         setCurrentTime(prev => prev + 1);
       }
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [isPlaying, videoId]);
+  }, [isPlaying]);
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -164,7 +112,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </Card>
       ) : (
         <div className="space-y-4">
-          <div className="video-container rounded-lg overflow-hidden shadow-lg relative">
+          <div className="video-container rounded-lg overflow-hidden shadow-lg">
             <iframe
               ref={videoRef}
               width="100%"
@@ -175,30 +123,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
             ></iframe>
-            
-            {captionsEnabled && currentCaption && (
-              <div className="absolute bottom-8 left-0 right-0 text-center">
-                <div className="bg-black bg-opacity-70 text-white px-4 py-2 mx-auto inline-block rounded">
-                  {currentCaption}
-                </div>
-              </div>
-            )}
-            
-            {captionsEnabled && captionsError && (
-              <div className="absolute bottom-8 left-0 right-0 text-center">
-                <div className="bg-red-600 bg-opacity-70 text-white px-4 py-2 mx-auto inline-block rounded text-sm">
-                  {captionsError}
-                </div>
-              </div>
-            )}
-            
-            {captionsEnabled && loading && (
-              <div className="absolute bottom-8 left-0 right-0 text-center">
-                <div className="bg-blue-600 bg-opacity-70 text-white px-4 py-2 mx-auto inline-block rounded text-sm">
-                  Loading transcript...
-                </div>
-              </div>
-            )}
           </div>
           
           <div className="flex items-center justify-between">
@@ -207,20 +131,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </div>
             
             <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={toggleCaptions}
-                className="flex items-center"
-                title={captionsEnabled ? "Disable captions" : "Enable captions"}
-              >
-                {captionsEnabled ? (
-                  <Captions className="h-4 w-4" />
-                ) : (
-                  <CaptionsOff className="h-4 w-4" />
-                )}
-              </Button>
-                
               <Button
                 variant="outline"
                 size="sm"
@@ -246,12 +156,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   setVideoUrl('');
                   setCurrentTime(0);
                   setIsPlaying(false);
-                  if (onCaptionsUpdate) {
-                    onCaptionsUpdate("");
-                  }
-                  if (onCaptionsDataUpdate) {
-                    onCaptionsDataUpdate([]);
-                  }
                 }}
               >
                 Reset
