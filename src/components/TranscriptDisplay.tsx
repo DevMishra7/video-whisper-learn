@@ -41,21 +41,25 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
   // Create transcript segments from YouTube captions data
   useEffect(() => {
     if (captionsData && captionsData.length > 0) {
+      console.log('Processing captions data:', captionsData.length, 'items');
+      
       const segments: TranscriptSegment[] = captionsData.map(caption => {
         const words = caption.text.split(/\s+/).filter(word => word.trim() !== '');
-        const wordDuration = caption.duration / words.length;
+        const wordDuration = words.length > 0 ? caption.duration / words.length : caption.duration;
         
         const transcriptWords: TranscriptWord[] = words.map((text, idx) => {
           const start = caption.start + (idx * wordDuration);
           const end = start + wordDuration;
           
-          // Highlight key vocabulary words
+          // Highlight vocabulary words (common learning words)
+          const cleanText = text.toLowerCase().replace(/[.,!?;:()[\]""']/g, '');
           const highlighted = [
             'hello', 'welcome', 'lesson', 'vocabulary', 'learn', 'greetings', 
             'morning', 'afternoon', 'evening', 'practice', 'phrases', 'question',
             'answer', 'essential', 'beginners', 'improve', 'clearly', 'slowly',
-            'conversation', 'family', 'friends', 'basic', 'useful', 'common'
-          ].includes(text.toLowerCase().replace(/[.,!?]/g, ''));
+            'conversation', 'family', 'friends', 'basic', 'useful', 'common',
+            'language', 'english', 'study', 'speaking', 'listening', 'reading'
+          ].includes(cleanText);
           
           return { text, start, end, highlighted };
         });
@@ -68,47 +72,9 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
       });
 
       setDynamicTranscript(segments);
-    } else if (captions && captions.trim() !== '') {
-      // Fallback to dynamic caption creation if no structured data
-      const words = captions.split(/\s+/).filter(word => word.trim() !== '');
-      if (words.length > 0) {
-        const startTime = Math.floor(currentTime);
-        const endTime = startTime + 3;
-        
-        const newSegment: TranscriptSegment = {
-          words: words.map((text, idx) => {
-            const wordDuration = 3 / words.length;
-            const start = startTime + (idx * wordDuration);
-            const end = start + wordDuration;
-            
-            const highlighted = [
-              'hello', 'welcome', 'lesson', 'vocabulary', 'learn', 'greetings', 
-              'morning', 'afternoon', 'evening', 'practice', 'phrases', 'question',
-              'answer', 'essential', 'beginners', 'improve', 'clearly', 'slowly'
-            ].includes(text.toLowerCase().replace(/[.,!?]/g, ''));
-            
-            return { text, start, end, highlighted };
-          }),
-          start: startTime,
-          end: endTime
-        };
-        
-        setDynamicTranscript(prev => {
-          const existingIndex = prev.findIndex(segment => 
-            Math.abs(segment.start - startTime) < 2
-          );
-          
-          if (existingIndex !== -1) {
-            const updated = [...prev];
-            updated[existingIndex] = newSegment;
-            return updated;
-          } else {
-            return [...prev, newSegment].sort((a, b) => a.start - b.start);
-          }
-        });
-      }
+      console.log('Created transcript segments:', segments.length);
     }
-  }, [captions, captionsData, currentTime]);
+  }, [captionsData]);
 
   const handleWordClick = (
     word: TranscriptWord,
@@ -131,6 +97,12 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
     segment => currentTime >= segment.start && currentTime <= segment.end
   );
 
+  const formatTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
   return (
     <div className="w-full max-w-3xl mx-auto mt-6">
       <Card className="bg-white shadow-md">
@@ -139,44 +111,51 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
           <div className="max-h-60 overflow-y-auto pr-2">
             {dynamicTranscript.length === 0 ? (
               <div className="text-gray-500 text-center py-8">
-                <p>Play the video to see the transcript appear here...</p>
-                <p className="text-sm mt-2">Real captions will be loaded from YouTube when available</p>
+                <p>Loading transcript from YouTube captions...</p>
+                <p className="text-sm mt-2">Make sure the video has captions available</p>
               </div>
             ) : (
-              dynamicTranscript.map((segment, segIndex) => {
-                const isActiveSegment = currentSegment === segment;
-                
-                return (
-                  <div 
-                    key={segIndex} 
-                    className={`mb-4 p-3 rounded-md transition-colors ${
-                      isActiveSegment ? "bg-linguify-primary/10 border-l-4 border-linguify-primary" : "hover:bg-gray-50"
-                    }`}
-                  >
-                    <div className="text-xs text-gray-500 mb-1">
-                      {Math.floor(segment.start / 60)}:{(segment.start % 60).toFixed(1).padStart(4, '0')} - {Math.floor(segment.end / 60)}:{(segment.end % 60).toFixed(1).padStart(4, '0')}
+              <div className="space-y-3">
+                {dynamicTranscript.map((segment, segIndex) => {
+                  const isActiveSegment = currentSegment === segment;
+                  
+                  return (
+                    <div 
+                      key={segIndex} 
+                      className={`p-3 rounded-md transition-all duration-200 ${
+                        isActiveSegment 
+                          ? "bg-linguify-primary/10 border-l-4 border-linguify-primary shadow-sm" 
+                          : "hover:bg-gray-50 border-l-4 border-transparent"
+                      }`}
+                    >
+                      <div className="text-xs text-gray-500 mb-2 font-medium">
+                        {formatTime(segment.start)} - {formatTime(segment.end)}
+                      </div>
+                      <div className="leading-relaxed">
+                        {segment.words.map((word, wordIndex) => (
+                          <React.Fragment key={`${segIndex}-${wordIndex}`}>
+                            <span
+                              className={`${
+                                word.highlighted
+                                  ? "text-linguify-primary font-medium bg-linguify-primary/10 px-1 rounded cursor-pointer"
+                                  : "hover:bg-gray-100 transition-colors px-1 py-0.5 rounded cursor-pointer"
+                              } ${
+                                currentTime >= word.start && currentTime <= word.end && isActiveSegment
+                                  ? "bg-yellow-200 px-1 rounded shadow-sm"
+                                  : ""
+                              }`}
+                              onClick={(e) => handleWordClick(word, e)}
+                              title="Click for definition"
+                            >
+                              {word.text}
+                            </span>{" "}
+                          </React.Fragment>
+                        ))}
+                      </div>
                     </div>
-                    {segment.words.map((word, wordIndex) => (
-                      <React.Fragment key={`${segIndex}-${wordIndex}`}>
-                        <span
-                          className={`${
-                            word.highlighted
-                              ? "text-linguify-primary font-medium bg-linguify-primary/10 px-1 rounded"
-                              : "hover:bg-gray-100 transition-colors px-1 py-0.5 rounded"
-                          } ${
-                            currentTime >= word.start && currentTime <= word.end && isActiveSegment
-                              ? "bg-yellow-200 px-1 rounded shadow-sm"
-                              : ""
-                          } cursor-pointer`}
-                          onClick={(e) => handleWordClick(word, e)}
-                        >
-                          {word.text}
-                        </span>{" "}
-                      </React.Fragment>
-                    ))}
-                  </div>
-                );
-              })
+                  );
+                })}
+              </div>
             )}
           </div>
         </CardContent>

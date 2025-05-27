@@ -21,15 +21,24 @@ export class YouTubeApiService {
 
   async getCaptionTracks(videoId: string): Promise<YouTubeCaptionTrack[]> {
     try {
+      console.log('Fetching caption tracks for video:', videoId);
       const response = await fetch(
         `https://www.googleapis.com/youtube/v3/captions?part=snippet&videoId=${videoId}&key=${this.apiKey}`
       );
       
       if (!response.ok) {
-        throw new Error('Failed to fetch caption tracks');
+        const errorText = await response.text();
+        console.error('Caption tracks API error:', response.status, errorText);
+        throw new Error(`Failed to fetch caption tracks: ${response.status}`);
       }
       
       const data = await response.json();
+      console.log('Caption tracks response:', data);
+      
+      if (!data.items || data.items.length === 0) {
+        console.log('No caption tracks found for this video');
+        return [];
+      }
       
       return data.items.map((item: any) => ({
         id: item.id,
@@ -45,16 +54,29 @@ export class YouTubeApiService {
 
   async getCaptions(trackId: string): Promise<YouTubeCaption[]> {
     try {
+      console.log('Fetching captions for track:', trackId);
       const response = await fetch(
-        `https://www.googleapis.com/youtube/v3/captions/${trackId}?tfmt=srv3&key=${this.apiKey}`
+        `https://www.googleapis.com/youtube/v3/captions/${trackId}?tfmt=srv3&key=${this.apiKey}`,
+        {
+          headers: {
+            'Accept': 'application/xml, text/xml, */*'
+          }
+        }
       );
       
       if (!response.ok) {
-        throw new Error('Failed to fetch captions');
+        const errorText = await response.text();
+        console.error('Captions API error:', response.status, errorText);
+        throw new Error(`Failed to fetch captions: ${response.status}`);
       }
       
       const xmlText = await response.text();
-      return this.parseSubtitles(xmlText);
+      console.log('Raw caption XML received, length:', xmlText.length);
+      
+      const captions = this.parseSubtitles(xmlText);
+      console.log('Parsed captions:', captions.length, 'segments');
+      
+      return captions;
     } catch (error) {
       console.error('Error fetching captions:', error);
       return [];
@@ -62,25 +84,47 @@ export class YouTubeApiService {
   }
 
   private parseSubtitles(xmlText: string): YouTubeCaption[] {
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-    const textElements = xmlDoc.getElementsByTagName('text');
-    
-    const captions: YouTubeCaption[] = [];
-    
-    for (let i = 0; i < textElements.length; i++) {
-      const element = textElements[i];
-      const start = parseFloat(element.getAttribute('start') || '0');
-      const duration = parseFloat(element.getAttribute('dur') || '3');
-      const text = element.textContent || '';
+    try {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
       
-      captions.push({
-        start,
-        duration,
-        text: text.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-      });
+      // Check for parsing errors
+      const parserError = xmlDoc.querySelector('parsererror');
+      if (parserError) {
+        console.error('XML parsing error:', parserError.textContent);
+        return [];
+      }
+      
+      const textElements = xmlDoc.getElementsByTagName('text');
+      console.log('Found text elements:', textElements.length);
+      
+      const captions: YouTubeCaption[] = [];
+      
+      for (let i = 0; i < textElements.length; i++) {
+        const element = textElements[i];
+        const start = parseFloat(element.getAttribute('start') || '0');
+        const duration = parseFloat(element.getAttribute('dur') || '3');
+        const text = element.textContent || '';
+        
+        if (text.trim()) {
+          captions.push({
+            start,
+            duration,
+            text: this.decodeHtmlEntities(text.trim())
+          });
+        }
+      }
+      
+      return captions;
+    } catch (error) {
+      console.error('Error parsing subtitles XML:', error);
+      return [];
     }
-    
-    return captions;
+  }
+
+  private decodeHtmlEntities(text: string): string {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
   }
 }

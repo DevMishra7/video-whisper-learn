@@ -28,15 +28,8 @@ export const useYouTubeCaptions = ({ videoId, currentTime, enabled }: UseYouTube
         return;
       }
 
-      // For demo purposes, we'll use a placeholder API key
-      // In production, this should come from environment variables
-      const apiKey = 'YOUR_YOUTUBE_API_KEY';
-      
-      if (apiKey === 'YOUR_YOUTUBE_API_KEY') {
-        // Fallback to mock captions if no API key is provided
-        setError('YouTube API key not configured. Using mock captions.');
-        return;
-      }
+      // Use the provided YouTube API key
+      const apiKey = 'AIzaSyCmiNHGvOZWiDTpBDjqrUUoVRF-SCbn7eQ';
 
       setLoading(true);
       setError(null);
@@ -49,12 +42,15 @@ export const useYouTubeCaptions = ({ videoId, currentTime, enabled }: UseYouTube
           // Use the first available caption track (usually English)
           const captionData = await youtubeService.getCaptions(tracks[0].id);
           setCaptions(captionData);
+          console.log('Captions loaded successfully:', captionData.length, 'segments');
         } else {
           setError('No captions available for this video');
+          setCaptions([]);
         }
       } catch (err) {
-        setError('Failed to load captions');
+        setError('Failed to load captions from YouTube');
         console.error('Caption loading error:', err);
+        setCaptions([]);
       } finally {
         setLoading(false);
       }
@@ -70,6 +66,8 @@ export const useYouTubeCaptions = ({ videoId, currentTime, enabled }: UseYouTube
       );
       
       setCurrentCaption(activeCaption?.text || '');
+    } else {
+      setCurrentCaption('');
     }
   }, [currentTime, captions]);
 
